@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPv4 Subnet Visualization Tool</title>
+<style>
+    body { font-family: Arial, sans-serif; background-color: #f0f4f7; color: #333; margin: 20px; }
+    h1, h2 { text-align: center; color: #004080; }
+    .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, select, button { padding: 8px; margin: 5px 0; font-size: 16px; }
+    button { background-color: #004080; color: white; border: none; cursor: pointer; border-radius: 5px; }
+    button:hover { background-color: #0066cc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #004080; color: white; }
+    .result { background: #e8f4ff; padding: 15px; border-radius: 8px; margin-top: 20px; }
+    .highlight { background: #ffffcc; }
+</style>
+</head>
+<body>
+
+<div class="container">
+<h1>IPv4 Address Subnet Calculation Visualizer</h1>
+
+<p>Enter an IPv4 address (e.g., <b>152.16.2.31</b>) and select a subnet mask to visualize step-by-step binary conversion and network calculation.</p>
+
+<label>IP Address: </label>
+<input type="text" id="ipInput" value="152.16.2.31">
+<label>Subnet Mask: </label>
+<select id="maskInput">
+  <option value="255.0.0.0">Class A - 255.0.0.0 (/8)</option>
+  <option value="255.255.0.0">Class B - 255.255.0.0 (/16)</option>
+  <option value="255.255.255.0" selected>Class C - 255.255.255.0 (/24)</option>
+</select>
+<button onclick="calculate()">Visualize</button>
+
+<div id="output"></div>
+
+<h2>Binary Value Reference (2⁰ to 2⁷)</h2>
+<table>
+<tr><th>Bit Position</th><th>Power of 2</th><th>Value</th></tr>
+<tr><td>Bit 7</td><td>2⁷</td><td>128</td></tr>
+<tr><td>Bit 6</td><td>2⁶</td><td>64</td></tr>
+<tr><td>Bit 5</td><td>2⁵</td><td>32</td></tr>
+<tr><td>Bit 4</td><td>2⁴</td><td>16</td></tr>
+<tr><td>Bit 3</td><td>2³</td><td>8</td></tr>
+<tr><td>Bit 2</td><td>2²</td><td>4</td></tr>
+<tr><td>Bit 1</td><td>2¹</td><td>2</td></tr>
+<tr><td>Bit 0</td><td>2⁰</td><td>1</td></tr>
+</table>
+
+<h2>Standard IPv4 Address Classes</h2>
+<table>
+<tr>
+  <th>Class</th>
+  <th>Address Range</th>
+  <th>Default Subnet Mask</th>
+  <th>Leading Bits</th>
+  <th>Use</th>
+</tr>
+<tr><td>A</td><td>1.0.0.0 – 126.255.255.255</td><td>255.0.0.0</td><td>0xxxxxxx</td><td>Large networks</td></tr>
+<tr><td>B</td><td>128.0.0.0 – 191.255.255.255</td><td>255.255.0.0</td><td>10xxxxxx</td><td>Medium networks</td></tr>
+<tr><td>C</td><td>192.0.0.0 – 223.255.255.255</td><td>255.255.255.0</td><td>110xxxxx</td><td>Small networks</td></tr>
+<tr><td>D</td><td>224.0.0.0 – 239.255.255.255</td><td>N/A</td><td>1110xxxx</td><td>Multicasting</td></tr>
+<tr><td>E</td><td>240.0.0.0 – 255.255.255.255</td><td>N/A</td><td>1111xxxx</td><td>Experimental</td></tr>
+</table>
+</div>
+
+<script>
+function calculate() {
+  const ip = document.getElementById('ipInput').value.trim();
+  const mask = document.getElementById('maskInput').value.trim();
+  const ipOctets = ip.split('.').map(Number);
+  const maskOctets = mask.split('.').map(Number);
+
+  if (ipOctets.length !== 4 || ipOctets.some(o => o < 0 || o > 255)) {
+    alert("Invalid IP address format!");
+    return;
+  }
+
+  let binaryTable = `<h2>Step 1: Decimal to Binary Conversion</h2>
+  <table><tr><th>Octet</th><th>Decimal</th><th>Binary (8-bit)</th></tr>`;
+  ipOctets.forEach((octet, i) => {
+    binaryTable += `<tr><td>${i+1}</td><td>${octet}</td><td>${octet.toString(2).padStart(8, '0')}</td></tr>`;
+  });
+  binaryTable += `</table>`;
+
+  let andTable = `<h2>Step 2: Bitwise AND Operation</h2>
+  <table><tr><th>Octet</th><th>IP Address (Binary)</th><th>Subnet Mask (Binary)</th><th>AND Result (Binary)</th><th>Decimal</th></tr>`;
+  let networkOctets = [];
+  for (let i = 0; i < 4; i++) {
+    const ipBin = ipOctets[i].toString(2).padStart(8, '0');
+    const maskBin = maskOctets[i].toString(2).padStart(8, '0');
+    const andResult = (ipOctets[i] & maskOctets[i]);
+    const andBin = andResult.toString(2).padStart(8, '0');
+    networkOctets.push(andResult);
+    andTable += `<tr><td>${i+1}</td><td>${ipBin}</td><td>${maskBin}</td><td>${andBin}</td><td>${andResult}</td></tr>`;
+  }
+  andTable += `</table>`;
+
+  const networkAddress = networkOctets.join('.');
+  const broadcastOctets = networkOctets.slice();
+  const maskBits = maskOctets.map(o => o.toString(2).padStart(8,'0')).join('').split('1').length - 1;
+  for (let i = 0; i < 4; i++) broadcastOctets[i] = networkOctets[i] | (~maskOctets[i] & 255);
+  const broadcastAddress = broadcastOctets.join('.');
+  const hostMin = networkOctets.slice(); hostMin[3] += 1;
+  const hostMax = broadcastOctets.slice(); hostMax[3] -= 1;
+
+  const summary = `
+  <div class='result'>
+    <h2>Step 3: Results Summary</h2>
+    <p><b>Network Address:</b> ${networkAddress}</p>
+    <p><b>Host Address Range:</b> ${hostMin.join('.')} to ${hostMax.join('.')}</p>
+    <p><b>Broadcast Address:</b> ${broadcastAddress}</p>
+    <p><b>CIDR Notation:</b> /${maskOctets.map(o => o.toString(2).padStart(8,'0')).join('').replace(/0/g,'').length}</p>
+  </div>`;
+
+  document.getElementById('output').innerHTML = binaryTable + andTable + summary;
+}
+</script>
+
+</body>
+</html>
